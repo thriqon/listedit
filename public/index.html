@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<meta name="mobile-web-app-capable" content="yes">
+		<title>MVH MailList</title>
+		<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/normalize/2.1.0/normalize.css" type="text/css">
+		<link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+	</head>
+	<body>
+
+		<script type="text/x-handlebars">
+			<div class="container">
+				<p class="text-right">Logged in as <img src="/profilepic"></p>
+				<hr>
+				{{outlet}}
+			</div>
+		</script>
+
+		<script type="text/x-handlebars" data-template-name="recipient">
+			<div class="row">
+				<div class="col-sm-5 col-xs-12">
+					{{input class="form-control" type="text" value=name}}
+				</div>
+				<div class="col-sm-5 col-xs-12">
+					{{#if isNew}}
+						{{input class="form-control" type="email" value=address}}
+					{{else}}
+						{{input class="form-control" value=address readonly=true}}
+					{{/if}}
+				</div>
+				<div class="col-sm-2 col-xs-12">
+					{{#if isDirty}}
+						{{#unless isNew}}
+							<span class="label label-warning">EDITED</span>
+							<button class="btn btn-default" {{action 'save'}}>Save</button>
+						{{/unless}}
+					{{/if}}
+
+					{{#if isNew}}
+						<span class="label label-success">NEW</span>
+						<button class="btn btn-default" {{action 'save'}}>Save</button>
+					{{/if}}
+
+					{{#unless isDirty}}
+						<button class="btn btn-default" {{action 'delete'}}>&times;</button>
+					{{/unless}}
+				</div>
+			</div>
+			<hr>
+		</script>
+
+		<script type="text/x-handlebars" data-template-name="index">
+			<a href="#" {{action 'addNewTop'}} class="btn btn-primary">Add</a>
+			<hr>
+
+			{{#each item in model}}
+			{{render 'recipient' item}}
+			{{/each}}
+
+			<a href="#" {{action 'addNew'}} class="btn btn-primary">Add</a>
+			<div id="bottom" style="height: 3em"></div>
+		</script>
+
+		<script type="text/x-handlebars" data-template-name="loading">
+			Laden...
+		</script>
+
+		<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/ember.js/1.5.1/ember.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/ember-data.js/1.0.0-beta.7/ember-data.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-growl/1.0.0/jquery.bootstrap-growl.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.2.0/bootbox.min.js"></script>
+		<script src="/app.js"></script>
+	</body>
+</html>
