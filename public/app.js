@@ -1,9 +1,9 @@
 App = Ember.Application.create();
 
-Ember.libraries.register('ListEdit', '0.0.1');
+Ember.libraries.register('ListEdit', '0.0.2');
 
 App.ApplicationAdapter = DS.RESTAdapter.extend();
-App.ApplicationSerializer = DS.RESTSerializer.extend({
+App.RecipientSerializer = DS.RESTSerializer.extend({
 	normalizeId : function (hash) {
 		hash.id = hash.address;
 	}
@@ -16,6 +16,16 @@ App.Router.reopen({
 App.Recipient = DS.Model.extend({
 	name: DS.attr('string'),
 	address: DS.attr('string')
+});
+
+App.Information = DS.Model.extend({
+	mailingList: DS.attr('string')
+});
+
+App.ApplicationRoute = Ember.Route.extend({
+	model : function () {
+		return this.get('store').find('information', 'current');
+	}
 });
 
 App.IndexRoute = Ember.Route.extend({

@@ -48,7 +48,7 @@ function loginFacebookUser (accessToken, refreshToken, profile, done) {
 function statusSender(req, res) {
 	return function (err, data) {
 		if (err) {
-			res.send(500, err);
+			res.send(500, {error: err});
 		} else {
 			res.send({status: 'OK'});
 		}
@@ -68,14 +68,45 @@ function storageMiddleware(config) {
 		.then(function (members) { res.end(JSON.stringify({recipients: members.items}));},
 		function (err) { res.send(500, err); });
 	})
-	.put("/recipients/:email", function (req, res) {
-		list.members(req.params.email).update({name: req.body.name}, statusSender(req, res));
+	.put("/recipients/:email", setJsonUtf8ContentType, function (req, res) {
+		list.members(req.params.email).update({name: req.body.recipient.name}, function (err, data) {
+			if (err) {
+				res.send(500, {error: err});
+			} else {
+				res.send({
+					"recipients": [{
+						address: req.params.email,
+						name: req.body.recipient.name
+					}]
+				});
+			}
+		});
 	})
 	.post("/recipients", function (req, res) {
-		list.members().create(req.body, statusSender(req, res));
+		list.members().create(req.body.recipient, function (err, data) {
+			if (err) {
+				res.send(500, {error: err});
+			} else {
+				res.send({
+					"recipients": [{
+						address: req.body.recipient.address,
+						name: req.body.recipient.name
+					}]
+				});
+			}
+		});
+
 	})
 	.delete("/recipients/:email", function (req, res) {
 		list.members(req.params.email).delete(statusSender(req, res));
+	})
+	.get("/information/current", setJsonUtf8ContentType, function (req, res) {
+		res.end(JSON.stringify({
+			"informations": [{
+				"id" : "current",
+				"mailingList" : config.mailingList
+			}]
+		}));
 	});
 }
 
