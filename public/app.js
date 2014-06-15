@@ -46,7 +46,7 @@ App.IndexRoute = Ember.Route.extend({
 });
 
 App.IndexController = Ember.ArrayController.extend({
-	sortProperties: ['lastName'],
+	sortProperties: ['isNew', 'lastName'],
 	sortAscending: true,
 	actions : {
 		'addNewTop' : function () {
