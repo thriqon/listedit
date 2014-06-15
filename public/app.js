@@ -15,7 +15,18 @@ App.Router.reopen({
 
 App.Recipient = DS.Model.extend({
 	name: DS.attr('string'),
-	address: DS.attr('string')
+	address: DS.attr('string'),
+	nameParts: function () {
+		if (this.get('name')) {
+			return this.get('name').split(' ');
+		} else {
+			return [];
+		}
+	}.property('name'),
+
+	lastName : function () {
+		return this.get('nameParts')[1];
+	}.property('nameParts.[]')
 });
 
 App.Information = DS.Model.extend({
@@ -35,6 +46,8 @@ App.IndexRoute = Ember.Route.extend({
 });
 
 App.IndexController = Ember.ArrayController.extend({
+	sortProperties: ['lastName'],
+	sortAscending: true,
 	actions : {
 		'addNewTop' : function () {
 			this.send('addNew');

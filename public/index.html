@@ -56,8 +56,8 @@
 			<a href="#" {{action 'addNewTop'}} class="btn btn-primary">Add</a>
 			<hr>
 
-			{{#each item in model}}
-			{{render 'recipient' item}}
+			{{#each}}
+			{{render 'recipient' this}}
 			{{/each}}
 
 			<a href="#" {{action 'addNew'}} class="btn btn-primary">Add</a>
