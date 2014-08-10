@@ -12,7 +12,10 @@ var express = require('express'),
 	Mailgun = require('mailgun-js'),
 	MongoClient = require('mongodb').MongoClient;
 
-MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL + 'mvh', function (err, db) {
+var mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL + process.env.OPENSHIFT_APP_NAME;
+console.log('Connecting to db at ' + mongoURL);
+
+MongoClient.connect(mongoURL, function (err, db) {
 	if (err) {
 		throw err;
 	}
@@ -131,7 +134,7 @@ MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL + 'mvh', function (err,
 			})
 			.use(cookieParser())
 			.use(bodyParser())
-			.use(session({secret: config.secret, store: new mongoStore({url: process.env.OPENSHIFT_MONGODB_DB_URL + 'mvh'})}))
+			.use(session({secret: config.secret, store: new mongoStore({db: db})}))
 			.use(passport.initialize())
 			.use(passport.session())
 			.get("/login/fb", passport.authenticate('facebook'))
