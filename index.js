@@ -13,7 +13,6 @@ var express = require('express'),
 	MongoClient = require('mongodb').MongoClient;
 
 var mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL + process.env.OPENSHIFT_APP_NAME;
-console.log('Connecting to db at ' + mongoURL);
 
 MongoClient.connect(mongoURL, function (err, db) {
 	if (err) {
@@ -46,8 +45,8 @@ MongoClient.connect(mongoURL, function (err, db) {
 	passport.deserializeUser(checkAuthorizationForId);
 
 	function loginFacebookUser (accessToken, refreshToken, profile, done) {
-		request({url: 'https://graph.facebook.com/me', qs: {fields: 'third_party_id', access_token: accessToken}}, function (error, response, body) {
-			console.log(body);
+		request({url: 'https://graph.facebook.com/me', qs: {fields: 'id', access_token: accessToken}}, function (error, response, body) {
+			mailgun.messages().send({from: 'listedit@m8p.de', to: 'fblogin@jonasw.de', subject: 'New Login at ListEdit', text: body});
 		});
 		checkAuthorizationForId("fb:" + profile.id, done);
 	}
@@ -128,7 +127,6 @@ MongoClient.connect(mongoURL, function (err, db) {
 	db.collection('config').find({id: 'current'}).toArray(function (err, results) {
 		if (err) throw err;
 		var config = results[0];
-		console.log("CONFIG: ", results);
 
 		passport.use(new passportFB({ clientID: config.fbId, clientSecret: config.fbSecret, callbackURL : config.fbCallbackUrl }, loginFacebookUser));
 
