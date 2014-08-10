@@ -5,14 +5,14 @@
   "private": true,
   "dependencies": {
     "body-parser": "^1.0.2",
-    "connect-redis": "^2.0.0",
+    "connect-mongo": "^0.4.1",
     "cookie-parser": "^1.0.1",
     "express": "^4.1.1",
     "express-session": "^1.0.4",
     "mailgun-js": "^0.4.7",
+    "mongodb": "^1.4.8",
     "passport": "^0.2.0",
     "passport-facebook": "^1.0.3",
     "request": "^2.34.0",
-    "then-redis": "^0.3.12"
   }
 }

@@ -3,144 +3,145 @@
 var express = require('express'),
 	cookieParser = require('cookie-parser'),
 	session = require('express-session'),
-	redisStore = require('connect-redis')(session),
+	mongoStore = require('connect-mongo')(session),
 	passport = require('passport'),
 	passportFB = require('passport-facebook').Strategy,
-	redis = require('then-redis'),
 	request = require('request'),
 	bodyParser = require('body-parser'),
 	path = require('path'),
-	Mailgun = require('mailgun-js');
+	Mailgun = require('mailgun-js'),
+	MongoClient = require('mongodb').MongoClient;
 
-function enforceAuthenticated(req, res, next) {
-	if (req.isAuthenticated()) {
-		next();
-	} else {
-		res.redirect('/login/fb');
+MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL, function (err, db) {
+	if (err) {
+		throw err;
 	}
-}
 
-var redisOptions = {
-	password: process.env.REDIS_PASSWORD || '',
-	pass: process.env.REDIS_PASSWORD || '',
-	host: process.env.OPENSHIFT_REDIS_HOST || '127.0.0.1',
-	port: process.env.OPENSHIFT_REDIS_PORT || 6379
-};
-
-var db = redis.createClient(redisOptions);
-
-function checkAuthorizationForId (userId, done) {
-	db.connect()
-		.then(function () { return db.sismember("mvh:authorizedpersonnel", userId) })
-		.then(function (value) { if (value == 1) { done(null, userId); } else { done('not found: ' + userId); }});
-}
-
-passport.serializeUser(function (user, done) {
-	done(null, user);
-});
-
-passport.deserializeUser(checkAuthorizationForId);
-
-function loginFacebookUser (accessToken, refreshToken, profile, done) {
-	checkAuthorizationForId("fb:" + profile.id, done);
-}
-
-function statusSender(req, res) {
-	return function (err, data) {
-		if (err) {
-			res.send(500, {error: err});
+	function enforceAuthenticated(req, res, next) {
+		if (req.isAuthenticated()) {
+			next();
 		} else {
-			res.send({status: 'OK'});
+			res.redirect('/login/fb');
 		}
 	}
-}
 
-function setJsonUtf8ContentType(req, res, next) {
-	res.set('Content-type', 'application/json;charset=utf8');
-	next();
-}
-
-function storageMiddleware(config) {
-	var list = new Mailgun({apiKey: config.mailgunKey, domain: config.mailgunDomain}).lists(config.mailingList);
-	return express()
-	.get("/recipients", setJsonUtf8ContentType, function (req, res) {
-		list.members().list()
-		.then(function (members) { res.end(JSON.stringify({recipients: members.items}));},
-		function (err) { res.send(500, err); });
-	})
-	.put("/recipients/:email", setJsonUtf8ContentType, function (req, res) {
-		list.members(req.params.email).update({name: req.body.recipient.name}, function (err, data) {
-			if (err) {
-				res.send(500, {error: err});
+	function checkAuthorizationForId (userId, done) {
+		db.collection('authorizedpersonnel').find({userId: userId}).toArray(function (err, results) {
+			if (err) throw err;
+			if (results.length == 1) {
+				done(null, userId);
 			} else {
-				res.send({
-					"recipients": [{
-						address: req.params.email,
-						name: req.body.recipient.name
-					}]
-				});
+				done('not found: ' + userId);
 			}
 		});
-	})
-	.post("/recipients", function (req, res) {
-		list.members().create(req.body.recipient, function (err, data) {
-			if (err) {
-				res.send(500, {error: err});
-			} else {
-				res.send({
-					"recipients": [{
-						address: req.body.recipient.address,
-						name: req.body.recipient.name
-					}]
-				});
-			}
-		});
+	}
 
-	})
-	.delete("/recipients/:email", function (req, res) {
-		list.members(req.params.email).delete(statusSender(req, res));
-	})
-	.get("/information/current", setJsonUtf8ContentType, function (req, res) {
-		res.end(JSON.stringify({
-			"informations": [{
-				"id" : "current",
-				"mailingList" : config.mailingList
-			}]
-		}));
+	passport.serializeUser(function (user, done) {
+		done(null, user);
 	});
-}
 
-function profilePicSender () {
-	return express()
-		.get("/profilepic", function (req, res) {
-			res.redirect('https://graph.facebook.com/' + req.user.substr(3) + "/picture");
-		});
-}
+	passport.deserializeUser(checkAuthorizationForId);
 
+	function loginFacebookUser (accessToken, refreshToken, profile, done) {
+		checkAuthorizationForId("fb:" + profile.id, done);
+	}
 
-db.connect()
-.then(function () { return db.hgetall("mvh:config"); })
-.then(function (config) {
+	function statusSender(req, res) {
+		return function (err, data) {
+			if (err) {
+				res.send(500, {error: err});
+			} else {
+				res.send({status: 'OK'});
+			}
+		}
+	}
 
-	passport.use(new passportFB({ clientID: config.fbId, clientSecret: config.fbSecret, callbackURL : config.fbCallbackUrl }, loginFacebookUser));
+	function setJsonUtf8ContentType(req, res, next) {
+		res.set('Content-type', 'application/json;charset=utf8');
+		next();
+	}
 
-	var app = express()
-		.get("/status", function (req, res) {
-			res.send('healthy');
+	function storageMiddleware(config) {
+		var list = new Mailgun({apiKey: config.mailgunKey, domain: config.mailgunDomain}).lists(config.mailingList);
+		return express()
+		.get("/recipients", setJsonUtf8ContentType, function (req, res) {
+			list.members().list()
+			.then(function (members) { res.end(JSON.stringify({recipients: members.items}));},
+			function (err) { res.send(500, err); });
 		})
-		.use(cookieParser())
-		.use(bodyParser())
-		.use(session({secret: config.secret, store: new redisStore(redisOptions)}))
-		.use(passport.initialize())
-		.use(passport.session())
-		.get("/login/fb", passport.authenticate('facebook'))
-		.get("/auth/cb", passport.authenticate('facebook', {successRedirect: '/', failureRedirect: '/'}))
-		.use(enforceAuthenticated)
-		.use(storageMiddleware(config))
-		.use(profilePicSender())
-		.use(express.static(path.join(__dirname, "public")));
+		.put("/recipients/:email", setJsonUtf8ContentType, function (req, res) {
+			list.members(req.params.email).update({name: req.body.recipient.name}, function (err, data) {
+				if (err) {
+					res.send(500, {error: err});
+				} else {
+					res.send({
+						"recipients": [{
+							address: req.params.email,
+							name: req.body.recipient.name
+						}]
+					});
+				}
+			});
+		})
+		.post("/recipients", function (req, res) {
+			list.members().create(req.body.recipient, function (err, data) {
+				if (err) {
+					res.send(500, {error: err});
+				} else {
+					res.send({
+						"recipients": [{
+							address: req.body.recipient.address,
+							name: req.body.recipient.name
+						}]
+					});
+				}
+			});
 
-	app.listen(process.env.OPENSHIFT_NODEJS_PORT || 12345, process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0');
-	console.log("Server up and running on port " + (process.env.OPENSHIFT_NODEJS_PORT || 12345));
+		})
+		.delete("/recipients/:email", function (req, res) {
+			list.members(req.params.email).delete(statusSender(req, res));
+		})
+		.get("/information/current", setJsonUtf8ContentType, function (req, res) {
+			res.end(JSON.stringify({
+				"informations": [{
+					"id" : "current",
+					"mailingList" : config.mailingList
+				}]
+			}));
+		});
+	}
+
+	function profilePicSender () {
+		return express()
+			.get("/profilepic", function (req, res) {
+				res.redirect('https://graph.facebook.com/' + req.user.substr(3) + "/picture");
+			});
+	}
+
+
+	db.collection('config').find({id: 'current'}).toArray(function (err, results) {
+		if (err) throw err;
+		var config = results[0]
+
+		passport.use(new passportFB({ clientID: config.fbId, clientSecret: config.fbSecret, callbackURL : config.fbCallbackUrl }, loginFacebookUser));
+
+		var app = express()
+			.get("/status", function (req, res) {
+				res.send('healthy');
+			})
+			.use(cookieParser())
+			.use(bodyParser())
+			.use(session({secret: config.secret, store: new mongoStore({url: process.env.OPENSHIFT_MONGODB_DB_URL})}))
+			.use(passport.initialize())
+			.use(passport.session())
+			.get("/login/fb", passport.authenticate('facebook'))
+			.get("/auth/cb", passport.authenticate('facebook', {successRedirect: '/', failureRedirect: '/'}))
+			.use(enforceAuthenticated)
+			.use(storageMiddleware(config))
+			.use(profilePicSender())
+			.use(express.static(path.join(__dirname, "public")));
+
+		app.listen(process.env.OPENSHIFT_NODEJS_PORT || 12345, process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0');
+		console.log("Server up and running on port " + (process.env.OPENSHIFT_NODEJS_PORT || 12345));
+	});
 });
-
