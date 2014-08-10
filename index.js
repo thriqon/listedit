@@ -125,7 +125,7 @@ MongoClient.connect(mongoURL, function (err, db) {
 	db.collection('config').find({id: 'current'}).toArray(function (err, results) {
 		if (err) throw err;
 		var config = results[0];
-		console.log("CONFIG: " + results);
+		console.log("CONFIG: ", results);
 
 		passport.use(new passportFB({ clientID: config.fbId, clientSecret: config.fbSecret, callbackURL : config.fbCallbackUrl }, loginFacebookUser));
 
