@@ -12,7 +12,7 @@ var express = require('express'),
 	Mailgun = require('mailgun-js'),
 	MongoClient = require('mongodb').MongoClient;
 
-MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL, function (err, db) {
+MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL + 'mvh', function (err, db) {
 	if (err) {
 		throw err;
 	}
@@ -53,7 +53,7 @@ MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL, function (err, db) {
 			} else {
 				res.send({status: 'OK'});
 			}
-		}
+		};
 	}
 
 	function setJsonUtf8ContentType(req, res, next) {
@@ -121,7 +121,7 @@ MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL, function (err, db) {
 
 	db.collection('config').find({id: 'current'}).toArray(function (err, results) {
 		if (err) throw err;
-		var config = results[0]
+		var config = results[0];
 
 		passport.use(new passportFB({ clientID: config.fbId, clientSecret: config.fbSecret, callbackURL : config.fbCallbackUrl }, loginFacebookUser));
 
@@ -131,7 +131,7 @@ MongoClient.connect(process.env.OPENSHIFT_MONGODB_DB_URL, function (err, db) {
 			})
 			.use(cookieParser())
 			.use(bodyParser())
-			.use(session({secret: config.secret, store: new mongoStore({url: process.env.OPENSHIFT_MONGODB_DB_URL})}))
+			.use(session({secret: config.secret, store: new mongoStore({url: process.env.OPENSHIFT_MONGODB_DB_URL + 'mvh'})}))
 			.use(passport.initialize())
 			.use(passport.session())
 			.get("/login/fb", passport.authenticate('facebook'))
