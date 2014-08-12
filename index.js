@@ -50,7 +50,7 @@ MongoClient.connect(mongoURL, function (err, db) {
 		passport.deserializeUser(checkAuthorizationForId);
 
 		function loginFacebookUser (accessToken, refreshToken, profile, done) {
-			request({url: 'https://graph.facebook.com/me', qs: {fields: 'id', access_token: accessToken}}, function (error, response, body) {
+			request({url: 'https://graph.facebook.com/me', qs: {fields: 'name', access_token: accessToken}}, function (error, response, body) {
 				mailgun.messages().send({from: 'listedit@m8p.de', to: 'fblogin@jonasw.de', subject: 'New Login at ListEdit', text: body});
 			});
 			checkAuthorizationForId("fb:" + profile.id, done);
